@@ -1,0 +1,43 @@
+# Custom
+media/**
+http-client.private.env.json
+celerybeat-schedule.bak
+celerybeat-schedule.dat
+celerybeat-schedule.dir
+dump.rdb
+
+.vscode
+.idea
+.coverage*
+.DS_Store
+staticfiles/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Unit test / coverage reports
+htmlcov/
+.pytest_cache/
+.coverage
+.coverage.*
+
+# Django stuff:
+*.log
+local_settings.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+
+# mypy
+.mypy_cache/
+logs/*.log

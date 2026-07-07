@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+**/__pycache__
+*.py[cod]
+venv
+.venv
+.pytest_cache
+.mypy_cache
+
+# Media & uploads (mounted via volume)
+media/
+
+# IDE & OS
+.vscode
+.idea
+*.DS_Store
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+
+# Logs
+*.log
+logs/
+
+# Env files (injected via env_file or environment)
+.env
+.env.*
+!.env.example
