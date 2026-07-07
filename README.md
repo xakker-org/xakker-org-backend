@@ -21,6 +21,8 @@ docker build -t xakker-backend .
 docker run --env-file .env -p 8000:8000 -e PORT=8000 xakker-backend
 ```
 
+Or with Postgres included: `docker compose up --build` (uses `docker-compose.yml`, reads `.env`).
+
 ## Deploy (Render)
 
 `render.yaml` provisions a Docker web service + managed Postgres. Set `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, and `CSRF_TRUSTED_ORIGINS` to match wherever the frontend is deployed.
