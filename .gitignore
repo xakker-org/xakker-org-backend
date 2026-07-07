@@ -11,6 +11,7 @@ dump.rdb
 .coverage*
 .DS_Store
 staticfiles/
+.vercel
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

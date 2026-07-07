@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "installCommand": "pip install -r requirements.txt",
+  "buildCommand": "python manage.py migrate --no-input && python manage.py collectstatic --no-input && python manage.py create_superuser_if_none",
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "includeFiles": [
+          "config/**",
+          "accounts/**",
+          "courses/**",
+          "static/**",
+          "staticfiles/**",
+          "manage.py"
+        ]
+      }
+    }
+  ],
+  "routes": [{ "src": "/(.*)", "dest": "api/index.py" }]
+}
