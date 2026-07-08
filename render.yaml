@@ -21,6 +21,19 @@ services:
         value: "https://xakker.org,https://self-study.xakker.org"
       - key: PYTHON_VERSION
         value: "3.12.0"
+      - key: EMAIL_HOST
+        value: "smtp.gmail.com"
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: DEFAULT_FROM_EMAIL
+        value: "Xakker <no-reply@xakker.org>"
+      # Secrets — not stored here; set the real values in the Render dashboard.
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
 
 databases:
   - name: xakker-db

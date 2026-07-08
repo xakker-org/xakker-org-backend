@@ -1,3 +1,6 @@
+import secrets
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -72,6 +75,48 @@ class UserProfile(models.Model):
         self.recompute_rank()
         self.last_activity = timezone.now()
         self.save(update_fields=["xp", "rank", "last_activity"])
+
+
+class PasswordResetCode(models.Model):
+    """One-time numeric code emailed to a user to reset their password."""
+
+    CODE_TTL_MINUTES = 10
+    MAX_ATTEMPTS = 5
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reset_codes",
+    )
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used = models.BooleanField(default=False)
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"{self.user.username} · reset code ({'used' if self.used else 'active'})"
+
+    def is_valid(self):
+        return (
+            not self.used
+            and self.attempts < self.MAX_ATTEMPTS
+            and timezone.now() < self.expires_at
+        )
+
+    @classmethod
+    def issue_for(cls, user):
+        # Invalidate any still-active codes so only the newest one works.
+        cls.objects.filter(user=user, used=False).update(used=True)
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        return cls.objects.create(
+            user=user,
+            code=code,
+            expires_at=timezone.now() + timedelta(minutes=cls.CODE_TTL_MINUTES),
+        )
 
 
 class Activity(models.Model):

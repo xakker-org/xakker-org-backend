@@ -1,7 +1,11 @@
+import logging
+import secrets
 from calendar import monthrange
 from datetime import date, timedelta
 
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
@@ -13,6 +17,8 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+logger = logging.getLogger(__name__)
+
 
 class LoginThrottle(AnonRateThrottle):
     scope = "login"
@@ -21,14 +27,40 @@ class LoginThrottle(AnonRateThrottle):
 class RegisterThrottle(AnonRateThrottle):
     scope = "register"
 
-from .models import Activity, UserProfile
+
+class PasswordResetThrottle(AnonRateThrottle):
+    scope = "password_reset"
+
+from .models import Activity, PasswordResetCode, UserProfile
 from .serializers import (
     ActivitySerializer,
     ClientTokenObtainPairSerializer,
     LeaderboardEntrySerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetVerifySerializer,
     RegisterSerializer,
     UserProfileSerializer,
 )
+
+
+def _check_reset_code(email, submitted_code):
+    """Validate a reset code without consuming it. Increments attempts on mismatch.
+    Returns (user, reset_code) on success, otherwise (None, None)."""
+    user = User.objects.filter(email__iexact=email, is_staff=False, is_superuser=False).first()
+    if not user:
+        return None, None
+
+    reset_code = PasswordResetCode.objects.filter(user=user, used=False).order_by("-created_at").first()
+    if not reset_code or not reset_code.is_valid():
+        return None, None
+
+    if not secrets.compare_digest(reset_code.code, submitted_code):
+        reset_code.attempts += 1
+        reset_code.save(update_fields=["attempts"])
+        return None, None
+
+    return user, reset_code
 
 
 class ClientTokenObtainPairView(TokenObtainPairView):
@@ -39,6 +71,78 @@ class ClientTokenObtainPairView(TokenObtainPairView):
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     throttle_classes = [RegisterThrottle]
+
+
+class PasswordResetRequestView(APIView):
+    throttle_classes = [PasswordResetThrottle]
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+
+        user = User.objects.filter(email__iexact=email, is_staff=False, is_superuser=False).first()
+        if not user:
+            logger.warning("Password reset requested for an email with no matching account: %s", email)
+            return Response({"detail": "No account is registered with this email."}, status=404)
+
+        reset_code = PasswordResetCode.issue_for(user)
+        try:
+            send_mail(
+                subject="Xakker — şifrə bərpa kodu / password reset code",
+                message=(
+                    f"Salam {user.username},\n\n"
+                    f"Şifrəni bərpa etmək üçün kodun: {reset_code.code}\n"
+                    f"Bu kod {PasswordResetCode.CODE_TTL_MINUTES} dəqiqə etibarlıdır.\n"
+                    "Bu sorğunu sən etməmisənsə, bu e-poçtu nəzərə alma.\n\n"
+                    "---\n\n"
+                    f"Hi {user.username},\n\n"
+                    f"Your Xakker password reset code is: {reset_code.code}\n"
+                    f"This code expires in {PasswordResetCode.CODE_TTL_MINUTES} minutes.\n"
+                    "If you didn't request this, you can safely ignore this email."
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+            logger.warning("Password reset email sent to user id=%s", user.id)
+        except Exception:
+            logger.exception("Password reset email failed to send for user id=%s", user.id)
+            return Response({"detail": "Couldn't send the email. Please try again shortly."}, status=502)
+
+        return Response({"detail": "A reset code has been sent to your email."})
+
+
+class PasswordResetVerifyView(APIView):
+    """Checks a code without consuming it, so the UI can move to the 'set new password' step."""
+
+    throttle_classes = [PasswordResetThrottle]
+
+    def post(self, request):
+        serializer = PasswordResetVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user, _ = _check_reset_code(serializer.validated_data["email"], serializer.validated_data["code"])
+        if not user:
+            return Response({"detail": "Invalid or expired code."}, status=400)
+        return Response({"detail": "Code verified."})
+
+
+class PasswordResetConfirmView(APIView):
+    throttle_classes = [PasswordResetThrottle]
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user, reset_code = _check_reset_code(serializer.validated_data["email"], serializer.validated_data["code"])
+        if not user:
+            return Response({"detail": "Invalid or expired code."}, status=400)
+
+        reset_code.used = True
+        reset_code.save(update_fields=["used"])
+
+        user.set_password(serializer.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return Response({"detail": "Password has been reset successfully."})
 
 
 class MeView(generics.GenericAPIView):
