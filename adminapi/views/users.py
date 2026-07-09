@@ -24,7 +24,7 @@ class AdminUserViewSet(
     permission_classes = [IsStaffUser]
     pagination_class = AdminPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["is_active", "is_staff"]
+    filterset_fields = ["is_active", "is_staff", "is_superuser"]
     search_fields = ["username", "email", "profile__full_name"]
     ordering_fields = ["date_joined", "id", "profile__xp"]
 

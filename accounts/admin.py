@@ -23,11 +23,17 @@ class StaffUserAdmin(BaseUserAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
+    """Regular registered users only — staff/superuser accounts have their own
+    section under Authentication and Authorization → Users (see StaffUserAdmin)."""
+
     list_display  = ("user", "xp_display", "rank", "streak_days", "tasks_completed", "rooms_completed", "best_streak")
     list_filter   = ("rank",)
     search_fields = ("user__username", "user__email")
     readonly_fields = ("user", "xp", "rank", "streak_days", "best_streak", "tasks_completed", "rooms_completed", "last_activity")
     ordering      = ("-xp",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(user__is_staff=False, user__is_superuser=False)
     fieldsets = (
         ("İstifadəçi", {"fields": ("user",)}),
         ("Gamification", {"fields": ("xp", "rank", "streak_days", "best_streak")}),
@@ -48,12 +54,17 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Activity)
 class ActivityAdmin(admin.ModelAdmin):
+    """Regular registered users' activity only — see UserProfileAdmin note above."""
+
     list_display  = ("user", "kind_badge", "title", "xp_delta_display", "created_at")
     list_filter   = ("kind",)
     search_fields = ("user__username", "title")
     readonly_fields = ("user", "kind", "title", "detail", "xp_delta", "created_at")
     date_hierarchy  = "created_at"
     ordering        = ("-created_at",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(user__is_staff=False, user__is_superuser=False)
 
     def has_add_permission(self, _request): return False
     def has_change_permission(self, _request, _obj=None): return False
