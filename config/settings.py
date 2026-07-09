@@ -37,9 +37,11 @@ INSTALLED_APPS = [
 
     "rest_framework",
     "corsheaders",
+    "django_filters",
 
     "accounts",
     "courses",
+    "adminapi",
 ]
 
 MIDDLEWARE = [
@@ -85,7 +87,10 @@ if _database_url:
             "PASSWORD": _u.password,
             "HOST": _db_host,
             "PORT": str(_u.port or 5432),
-            "OPTIONS": {"sslmode": "require"},
+            **({"OPTIONS": {"sslmode": "require"}} if _db_host not in ("127.0.0.1", "localhost", "db") else {}),
+            # Reusing the connection across requests avoids repaying the TCP+TLS+auth
+            # handshake every time — big win for a remote DB (e.g. Supabase), harmless locally.
+            "CONN_MAX_AGE": 60,
         }
     }
     DISABLE_SERVER_SIDE_CURSORS = True
@@ -143,6 +148,10 @@ CORS_ALLOWED_ORIGINS = [
         "CORS_ALLOWED_ORIGINS",
         "https://xakker.org,https://self-study.xakker.org,http://localhost:5173,http://localhost:8000,http://127.0.0.1:8000",
     ),
+    *get_list_env(
+        "ADMIN_CORS_ORIGINS",
+        "https://admin.xakker.org,http://admin.xakker.org:8080,http://localhost:5175,http://127.0.0.1:5175",
+    ),
 ]
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
@@ -153,6 +162,10 @@ CSRF_TRUSTED_ORIGINS = [
     *get_list_env(
         "CSRF_TRUSTED_ORIGINS",
         "https://xakker.org,https://self-study.xakker.org,http://localhost:5173,http://localhost:8000,http://127.0.0.1:8000",
+    ),
+    *get_list_env(
+        "ADMIN_CORS_ORIGINS",
+        "https://admin.xakker.org,http://admin.xakker.org:8080,http://localhost:5175,http://127.0.0.1:5175",
     ),
 ]
 
@@ -173,6 +186,7 @@ REST_FRAMEWORK = {
         "login": "10/min",
         "register": "5/min",
         "password_reset": "5/min",
+        "admin_login": "10/min",
     },
 }
 

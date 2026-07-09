@@ -91,7 +91,14 @@ class RoomTagListView(generics.ListAPIView):
 # ----- Courses (legacy) -----
 
 class CourseListView(generics.ListAPIView):
-    queryset = Course.objects.filter(is_published=True).select_related("category").prefetch_related("rooms")
+    queryset = (
+        Course.objects.filter(is_published=True)
+        .select_related("category")
+        .annotate(
+            room_count=Count("rooms", distinct=True),
+            lesson_count=Count("lessons", distinct=True),
+        )
+    )
     serializer_class = CourseListSerializer
 
 

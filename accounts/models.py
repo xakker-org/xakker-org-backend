@@ -126,6 +126,7 @@ class Activity(models.Model):
         EXAM_SUBMIT = "exam_submit", "Exam submitted"
         ENROLL = "enroll", "Enrolled"
         RANK_UP = "rank_up", "Rank up"
+        ADMIN_GRANT = "admin_grant", "XP awarded by admin"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

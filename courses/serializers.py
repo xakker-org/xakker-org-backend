@@ -499,8 +499,8 @@ class CabinetSummarySerializer(serializers.Serializer):
 
 class CourseListSerializer(serializers.ModelSerializer):
     category = serializers.StringRelatedField()
-    room_count = serializers.IntegerField(source="rooms.count", read_only=True)
-    lesson_count = serializers.IntegerField(source="lessons.count", read_only=True)
+    room_count = serializers.IntegerField(read_only=True)
+    lesson_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Course
@@ -636,7 +636,9 @@ class MissionListSerializer(serializers.ModelSerializer):
         ]
 
     def get_pass_count(self, obj):
-        return obj.passes.filter(is_published=True).count()
+        # `.filter()` builds a fresh QuerySet and always hits the DB, even
+        # though the view prefetches `passes` — filter the cached list instead.
+        return sum(1 for p in obj.passes.all() if p.is_published)
 
     def get_has_exam(self, obj):
         return hasattr(obj, "mission_exam") and obj.mission_exam.is_published
@@ -649,16 +651,16 @@ class MissionListSerializer(serializers.ModelSerializer):
             prog = obj.user_progress.get(user=request.user)
         except MissionProgress.DoesNotExist:
             return None
-        passes = obj.passes.filter(is_published=True)
+        published_passes = [p for p in obj.passes.all() if p.is_published]
         completed = MissionPassCompletion.objects.filter(
-            user=request.user, mission_pass__in=passes
+            user=request.user, mission_pass__in=published_passes
         ).count()
         return {
             "is_started": True,
             "is_completed": prog.is_completed,
             "exam_passed": prog.exam_passed,
             "completed_passes": completed,
-            "total_passes": passes.count(),
+            "total_passes": len(published_passes),
         }
 
 

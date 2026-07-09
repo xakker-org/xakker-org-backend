@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django import forms
 
+from .choices import sync_choices
 from .models import (
     Category,
     Course,
@@ -472,17 +473,19 @@ class QuestionAdminForm(forms.ModelForm):
             question.choices.all().delete()
             return
         opt_map = [
-            ("A", (self.cleaned_data.get("option_a") or "").strip()),
-            ("B", (self.cleaned_data.get("option_b") or "").strip()),
-            ("C", (self.cleaned_data.get("option_c") or "").strip()),
-            ("D", (self.cleaned_data.get("option_d") or "").strip()),
-            ("E", (self.cleaned_data.get("option_e") or "").strip()),
+            ("A", self.cleaned_data.get("option_a")),
+            ("B", self.cleaned_data.get("option_b")),
+            ("C", self.cleaned_data.get("option_c")),
+            ("D", self.cleaned_data.get("option_d")),
+            ("E", self.cleaned_data.get("option_e")),
         ]
-        correct = self.cleaned_data.get("correct_option")
-        question.choices.all().delete()
-        for order, (letter, text) in enumerate(opt_map, start=1):
-            if text:
-                QuestionChoice.objects.create(question=question, text=text, is_correct=(letter == correct), order=order)
+        sync_choices(
+            question,
+            options=opt_map,
+            correct_letter=self.cleaned_data.get("correct_option"),
+            choice_model=QuestionChoice,
+            text_field="text",
+        )
 
 
 @admin.register(Question)
@@ -796,27 +799,24 @@ class MissionExamQuestionAdminForm(forms.ModelForm):
         return question
 
     def _sync_choices(self, question):
-        question.choices.all().delete()
         if question.question_type != MissionExamQuestionTypeChoices.CLOSED:
+            question.choices.all().delete()
             return
 
         opt_map = [
-            ("A", (self.cleaned_data.get("option_a") or "").strip()),
-            ("B", (self.cleaned_data.get("option_b") or "").strip()),
-            ("C", (self.cleaned_data.get("option_c") or "").strip()),
-            ("D", (self.cleaned_data.get("option_d") or "").strip()),
-            ("E", (self.cleaned_data.get("option_e") or "").strip()),
+            ("A", self.cleaned_data.get("option_a")),
+            ("B", self.cleaned_data.get("option_b")),
+            ("C", self.cleaned_data.get("option_c")),
+            ("D", self.cleaned_data.get("option_d")),
+            ("E", self.cleaned_data.get("option_e")),
         ]
-        correct = self.cleaned_data.get("correct_option")
-        for order, (letter, text) in enumerate(opt_map, start=1):
-            if not text:
-                continue
-            MissionExamChoice.objects.create(
-                question=question,
-                choice_text=text,
-                is_correct=(letter == correct),
-                order=order,
-            )
+        sync_choices(
+            question,
+            options=opt_map,
+            correct_letter=self.cleaned_data.get("correct_option"),
+            choice_model=MissionExamChoice,
+            text_field="choice_text",
+        )
 
 class MissionExamQuestionInline(admin.StackedInline):
     model  = MissionExamQuestion
