@@ -158,6 +158,8 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.vercel\.app$",
 ]
 
+CORS_EXPOSE_HEADERS = ["Retry-After"]
+
 CSRF_TRUSTED_ORIGINS = [
     *get_list_env(
         "CSRF_TRUSTED_ORIGINS",
