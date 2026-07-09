@@ -199,7 +199,7 @@ class MyProfileView(APIView):
 class PublicProfileView(APIView):
     def get(self, request, username):
         try:
-            user = User.objects.get(username__iexact=username)
+            user = User.objects.get(username__iexact=username, is_staff=False, is_superuser=False)
         except User.DoesNotExist:
             return Response({"detail": "Profile not found."}, status=404)
         profile, _ = UserProfile.objects.get_or_create(user=user)
