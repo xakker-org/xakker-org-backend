@@ -33,14 +33,6 @@ MODEL_GROUPS = [
         },
     ),
     (
-        "Self-Study Questions",
-        {
-            "Question",
-            "QuestionChoice",
-            "QuestionAttempt",
-        },
-    ),
-    (
         "Learning Plans",
         {
             "LearningPlan",

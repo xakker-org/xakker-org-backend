@@ -235,25 +235,9 @@ class ProfileDetailStatsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from courses.models import QuestionAttempt
-
         user = request.user
         profile, _ = UserProfile.objects.get_or_create(user=user)
         data = UserProfileSerializer(profile, context={"request": request}).data
-
-        qa_agg = QuestionAttempt.objects.filter(user=user).aggregate(
-            total_attempts=Count("id"),
-            unique_solved=Count("question", distinct=True),
-            correct=Count("id", filter=Q(is_correct=True)),
-            points=Sum("points_awarded"),
-        )
-
-        unique_correct = (
-            QuestionAttempt.objects.filter(user=user, is_correct=True)
-            .values("question")
-            .distinct()
-            .count()
-        )
 
         leaderboard_rank = (
             UserProfile.objects.filter(
@@ -264,36 +248,22 @@ class ProfileDetailStatsView(APIView):
             + 1
         )
 
-        active_days = (
-            QuestionAttempt.objects.filter(user=user)
-            .annotate(day=TruncDate("attempted_at"))
-            .values("day")
-            .distinct()
-            .count()
-        )
+        active_days = 0
+        best_day = None
 
-        best_day = (
-            QuestionAttempt.objects.filter(user=user)
-            .annotate(day=TruncDate("attempted_at"))
-            .values("day")
-            .annotate(day_points=Sum("points_awarded"))
-            .order_by("-day_points")
-            .first()
-        )
-
-        unique_attempted = qa_agg["unique_solved"] or 0
-        correct_answers = unique_correct
+        unique_attempted = 0
+        correct_answers = 0
         wrong_answers = unique_attempted - correct_answers
         accuracy = round(correct_answers / unique_attempted * 100, 1) if unique_attempted > 0 else 0.0
 
         data.update({
             "leaderboard_rank": leaderboard_rank,
             "total_questions_solved": unique_attempted,
-            "total_attempts": qa_agg["total_attempts"] or 0,
+            "total_attempts": 0,
             "correct_answers": correct_answers,
             "wrong_answers": max(0, wrong_answers),
             "accuracy_rate": accuracy,
-            "total_points_earned": qa_agg["points"] or 0,
+            "total_points_earned": 0,
             "active_days": active_days,
             "best_day_points": best_day["day_points"] if best_day else 0,
             "best_day_date": str(best_day["day"]) if best_day else None,
@@ -307,18 +277,17 @@ class ActivityGraphView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from courses.models import LessonQuestionAttempt, QuestionAttempt, UserQuestionAttempt
+        from courses.models import LessonQuestionAttempt, UserQuestionAttempt
 
         user = request.user
         selected_year = request.query_params.get("year")
 
         # Fetch all user attempts (no date filter yet)
-        all_attempts_qa = QuestionAttempt.objects.filter(user=user).values_list("attempted_at__date", flat=True)
         all_attempts_lqa = LessonQuestionAttempt.objects.filter(user=user).values_list("attempted_at__date", flat=True)
         all_attempts_uqa = UserQuestionAttempt.objects.filter(user=user).values_list("attempted_at__date", flat=True)
 
         # Combine all dates to find which years have activity
-        all_dates = list(all_attempts_qa) + list(all_attempts_lqa) + list(all_attempts_uqa)
+        all_dates = list(all_attempts_lqa) + list(all_attempts_uqa)
         years_with_activity = sorted(set(d.year for d in all_dates if d))
 
         # If no activity, return empty response
@@ -354,14 +323,6 @@ class ActivityGraphView(APIView):
                 merged[d]["questions_solved"] += entry.get("q") or 0
                 merged[d]["correct_answers"] += entry.get("c") or 0
                 merged[d]["points_earned"] += entry.get(points_field) or 0
-
-        qa_data = (
-            QuestionAttempt.objects.filter(user=user, attempted_at__date__gte=start_date, attempted_at__date__lte=end_date)
-            .annotate(day=TruncDate("attempted_at"))
-            .values("day")
-            .annotate(q=Count("id"), c=Count("id", filter=Q(is_correct=True)), p=Sum("points_awarded"))
-        )
-        add_entries(qa_data, "p")
 
         lqa_data = (
             LessonQuestionAttempt.objects.filter(user=user, attempted_at__date__gte=start_date, attempted_at__date__lte=end_date)
@@ -400,30 +361,12 @@ class RecentStudyActivityView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from courses.models import LessonQuestionAttempt, QuestionAttempt
+        from courses.models import LessonQuestionAttempt
 
         user = request.user
         limit = min(int(request.query_params.get("limit", 20)), 50)
 
         activities = []
-
-        qa_list = (
-            QuestionAttempt.objects.filter(user=user)
-            .select_related("question", "question__course")
-            .order_by("-attempted_at")[:limit]
-        )
-        for qa in qa_list:
-            activities.append({
-                "id": qa.id,
-                "type": "self_study",
-                "question_title": qa.question.title,
-                "question_id": qa.question.id,
-                "course_name": qa.question.course.title if qa.question.course_id else "",
-                "is_correct": qa.is_correct,
-                "points_earned": qa.points_awarded,
-                "attempted_at": qa.attempted_at.isoformat(),
-                "attempt_number": qa.attempt_number,
-            })
 
         lqa_list = (
             LessonQuestionAttempt.objects.filter(user=user)
