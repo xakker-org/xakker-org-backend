@@ -10,3 +10,5 @@ gunicorn>=22.0.0
 psycopg[binary]==3.2.13
 # Pillow is required for ImageField usage
 pillow>=11.1.0
+# AI Köməkçi (chatbot) — Groq REST calls
+httpx>=0.27.0

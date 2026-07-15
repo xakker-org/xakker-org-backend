@@ -14,8 +14,6 @@ from courses.models import (
     Lesson,
     Mission,
     MissionExamAttempt,
-    Question,
-    QuestionAttempt,
     Room,
     UserTaskProgress,
 )
@@ -45,7 +43,6 @@ class AnalyticsOverviewView(APIView):
                 "courses": Course.objects.count(),
                 "rooms": Room.objects.count(),
                 "missions": Mission.objects.count(),
-                "questions": Question.objects.count(),
                 "lessons": Lesson.objects.count(),
             },
         })
@@ -55,11 +52,6 @@ class AnalyticsContentView(APIView):
     permission_classes = [IsAuthenticated, IsStaffUser]
 
     def get(self, request):
-        top_questions = list(
-            QuestionAttempt.objects.values("question__title")
-            .annotate(attempts=Count("id"))
-            .order_by("-attempts")[:10]
-        )
         rooms_by_completed_tasks = list(
             UserTaskProgress.objects.filter(completed=True)
             .values("task__room__title")
@@ -73,7 +65,6 @@ class AnalyticsContentView(APIView):
         )
 
         return Response({
-            "top_questions": top_questions,
             "rooms_by_completed_tasks": rooms_by_completed_tasks,
             "exam_stats": exam_stats,
         })

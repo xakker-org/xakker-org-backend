@@ -19,9 +19,6 @@ from .models import (
     MissionPass,
     MissionPassCompletion,
     MissionProgress,
-    Question,
-    QuestionAttempt,
-    QuestionChoice,
     Room,
     RoomTag,
     Task,
@@ -355,125 +352,6 @@ class TaskAnswerResultSerializer(serializers.Serializer):
     room_completed = serializers.BooleanField()
     badges_earned = serializers.ListField(child=serializers.DictField(), required=False)
     new_rank = serializers.CharField(allow_null=True, required=False)
-
-
-# ----- Legacy Question/Exam serializers -----
-
-class QuestionChoiceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = QuestionChoice
-        fields = ["id", "text", "order"]
-
-
-class QuestionSerializer(serializers.ModelSerializer):
-    choices = QuestionChoiceSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Question
-        fields = [
-            "id",
-            "title",
-            "prompt",
-            "question_type",
-            "level",
-            "points",
-            "order",
-            "starter_code",
-            "explanation",
-            "choices",
-        ]
-
-
-class QuestionListSerializer(serializers.ModelSerializer):
-    course = CourseSummarySerializer(read_only=True)
-    user_status = serializers.SerializerMethodField()
-    attempt_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Question
-        fields = ["id", "title", "question_type", "level", "points", "course", "user_status", "attempt_count"]
-
-    def get_user_status(self, obj):
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        if not user or not user.is_authenticated:
-            return "pending"
-        attempts = QuestionAttempt.objects.filter(user=user, question=obj)
-        if not attempts.exists():
-            return "pending"
-        if attempts.filter(is_correct=True).exists():
-            return "correct"
-        return "wrong"
-
-    def get_attempt_count(self, obj):
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        if not user or not user.is_authenticated:
-            return 0
-        return QuestionAttempt.objects.filter(user=user, question=obj).count()
-
-
-class QuestionDetailSerializer(serializers.ModelSerializer):
-    course = CourseSummarySerializer(read_only=True)
-    choices = QuestionChoiceSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Question
-        fields = [
-            "id",
-            "title",
-            "prompt",
-            "question_type",
-            "level",
-            "points",
-            "course",
-            "starter_code",
-            "explanation",
-            "choices",
-        ]
-
-
-class QuestionAttemptSerializer(serializers.ModelSerializer):
-    question = serializers.PrimaryKeyRelatedField(read_only=True)
-
-    class Meta:
-        model = QuestionAttempt
-        fields = [
-            "id",
-            "question",
-            "submitted_answer",
-            "is_correct",
-            "points_awarded",
-            "attempt_number",
-            "hint_used",
-            "attempted_at",
-        ]
-
-
-class UserProgressSerializer(serializers.Serializer):
-    total_questions = serializers.IntegerField()
-    answered_questions = serializers.IntegerField()
-    correct_answers = serializers.IntegerField()
-    total_attempts = serializers.IntegerField()
-    total_points_earned = serializers.IntegerField()
-    accuracy_percent = serializers.FloatField()
-
-
-class QuestionAnswerSubmitSerializer(serializers.Serializer):
-    answer_text = serializers.CharField(required=False, allow_blank=True, default="")
-    selected_choice_id = serializers.IntegerField(required=False, allow_null=True)
-    selected_choice_ids = serializers.ListField(
-        child=serializers.IntegerField(), required=False, allow_empty=True
-    )
-    hint_used = serializers.BooleanField(required=False, default=False)
-
-    def validate(self, attrs):
-        has_text = bool((attrs.get("answer_text") or "").strip())
-        has_single = attrs.get("selected_choice_id") is not None
-        has_many = bool(attrs.get("selected_choice_ids"))
-        if not (has_text or has_single or has_many):
-            raise serializers.ValidationError("Provide answer_text or selected_choice_id(s).")
-        return attrs
 
 
 class LessonQuestionSubmitSerializer(serializers.Serializer):

@@ -1,6 +1,6 @@
 """Seed the platform with realistic demo content for both the student app
-and the admin panel: categories, tags, courses (+lessons+self-study
-questions), rooms (+tasks+task questions), missions (+passes+exams), and
+and the admin panel: categories, tags, courses (+lessons+lesson questions),
+rooms (+tasks+task questions), missions (+passes+exams), and
 learning plans.
 
 This is a fresh, correctly-encoded replacement seed path — `seed_all.py`
@@ -33,9 +33,6 @@ from courses.models import (
     MissionExamQuestion,
     MissionExamQuestionTypeChoices,
     MissionPass,
-    Question,
-    QuestionChoice,
-    QuestionTypeChoices,
     Room,
     RoomTag,
     Task,
@@ -731,21 +728,6 @@ def seed_courses(categories):
                     choice_model=LessonQuestionChoice, text_field="text",
                 )
 
-        for i, qd in enumerate(cd.get("questions", []), start=1):
-            q, _ = Question.objects.update_or_create(
-                course=course, title=qd["title"],
-                defaults={
-                    "prompt": qd["prompt"], "question_type": qd["type"], "level": qd["level"],
-                    "points": qd["points"], "starter_code": qd.get("starter_code", ""),
-                    "order": i,
-                },
-            )
-            if qd["type"] == "closed" and qd.get("choices"):
-                letters = ["A", "B", "C", "D", "E"]
-                options = [(letters[i], text) for i, (text, _) in enumerate(qd["choices"])]
-                correct = next(letters[i] for i, (_, ok) in enumerate(qd["choices"]) if ok)
-                sync_choices(q, options=options, correct_letter=correct, choice_model=QuestionChoice, text_field="text")
-
     return courses_by_slug
 
 
@@ -858,8 +840,6 @@ def wipe_content():
     MissionExam.objects.all().delete()
     MissionPass.objects.all().delete()
     Mission.objects.all().delete()
-    QuestionChoice.objects.all().delete()
-    Question.objects.all().delete()
     LessonQuestionChoice.objects.all().delete()
     LessonQuestion.objects.all().delete()
     Lesson.objects.all().delete()
@@ -890,7 +870,7 @@ class Command(BaseCommand):
         cats = ensure_categories()
         tags = ensure_tags()
 
-        self.stdout.write("Kurslar, dərslər və sərbəst tədris sualları...")
+        self.stdout.write("Kurslar və dərslər...")
         courses = seed_courses(cats)
 
         self.stdout.write("Lab otaqları və tapşırıqlar...")
@@ -908,7 +888,6 @@ class Command(BaseCommand):
             f"  {RoomTag.objects.count()} teq\n"
             f"  {Course.objects.count()} kurs\n"
             f"  {Lesson.objects.count()} dərs\n"
-            f"  {Question.objects.count()} sərbəst tədris sualı\n"
             f"  {Room.objects.count()} lab otağı\n"
             f"  {Task.objects.count()} task\n"
             f"  {TaskQuestion.objects.count()} task sualı\n"

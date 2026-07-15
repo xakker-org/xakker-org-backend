@@ -27,9 +27,6 @@ from .models import (
     MissionPass,
     MissionPassCompletion,
     MissionProgress,
-    Question,
-    QuestionAttempt,
-    QuestionTypeChoices,
     Room,
     RoomTag,
     Task,
@@ -55,16 +52,11 @@ from .serializers import (
     RoomDetailSerializer,
     RoomListSerializer,
     RoomTagSerializer,
-    QuestionAnswerSubmitSerializer,
-    QuestionAttemptSerializer,
-    QuestionDetailSerializer,
-    QuestionListSerializer,
     TaskAnswerResultSerializer,
     TaskAnswerSubmitSerializer,
     TaskDetailSerializer,
-    UserProgressSerializer,
 )
-from .services import get_user_question_progress, submit_question_answer, submit_task_answer
+from .services import submit_task_answer
 
 
 def _normalize_exam_text(value):
@@ -115,108 +107,6 @@ class CourseDetailView(generics.RetrieveAPIView):
 
 
 # ----- Self-study questions -----
-
-class QuestionListView(generics.ListAPIView):
-    serializer_class = QuestionListSerializer
-
-    def get_queryset(self):
-        queryset = Question.objects.filter(course__is_published=True).select_related("course", "course__category")
-        params = self.request.query_params
-
-        if params.get("level"):
-            queryset = queryset.filter(level=params["level"])
-
-        if params.get("question_type"):
-            queryset = queryset.filter(question_type=params["question_type"])
-
-        course_filter = params.get("course")
-        if course_filter:
-            queryset = queryset.filter(Q(course__slug=course_filter) | Q(course_id=course_filter))
-
-        if params.get("search"):
-            search = params["search"]
-            queryset = queryset.filter(Q(title__icontains=search) | Q(prompt__icontains=search))
-
-        return queryset.order_by("order", "id").distinct()
-
-
-class QuestionDetailView(generics.RetrieveAPIView):
-    serializer_class = QuestionDetailSerializer
-    queryset = Question.objects.filter(course__is_published=True).select_related("course", "course__category").prefetch_related("choices")
-    lookup_field = "id"
-
-    def retrieve(self, request, *args, **kwargs):
-        question = self.get_object()
-        data = self.get_serializer(question).data
-        if request.user.is_authenticated:
-            attempts = QuestionAttempt.objects.filter(user=request.user, question=question).order_by("-attempted_at")
-            data["attempts"] = QuestionAttemptSerializer(attempts, many=True).data
-            data["has_answered"] = attempts.exists()
-            if attempts.exists():
-                data["correct_choice_ids"] = list(
-                    question.choices.filter(is_correct=True).values_list("id", flat=True)
-                )
-                data["expected_answer"] = question.expected_answer or ""
-            else:
-                data["correct_choice_ids"] = []
-                data["expected_answer"] = ""
-        else:
-            data["attempts"] = []
-            data["has_answered"] = False
-            data["correct_choice_ids"] = []
-            data["expected_answer"] = ""
-        return Response(data)
-
-
-class QuestionSubmitAnswerView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request, id):
-        question = get_object_or_404(Question.objects.prefetch_related("choices"), id=id)
-        serializer = QuestionAnswerSubmitSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        payload = serializer.validated_data
-
-        if question.question_type == QuestionTypeChoices.CLOSED and payload.get("selected_choice_id") is None:
-            return Response({"detail": "Bu sual ucun variant secmelisiniz."}, status=status.HTTP_400_BAD_REQUEST)
-        if question.question_type in {QuestionTypeChoices.OPEN, QuestionTypeChoices.TERMINAL} and not (payload.get("answer_text") or "").strip():
-            return Response({"detail": "Bu sual ucun yazili cavab daxil etmelisiniz."}, status=status.HTTP_400_BAD_REQUEST)
-
-        result = submit_question_answer(
-            user=request.user,
-            question=question,
-            answer_text=payload.get("answer_text", "") or "",
-            selected_choice_id=payload.get("selected_choice_id"),
-            selected_choice_ids=payload.get("selected_choice_ids") or [],
-            hint_used=payload.get("hint_used", False),
-        )
-
-        attempts = QuestionAttempt.objects.filter(user=request.user, question=question).order_by("-attempted_at")
-        correct_choice_ids = list(question.choices.filter(is_correct=True).values_list("id", flat=True))
-        return Response(
-            {
-                "question_id": question.id,
-                "is_correct": result["is_correct"],
-                "points_awarded": result["points_awarded"],
-                "attempt_number": result["attempt_number"],
-                "explanation": result["explanation"],
-                "already_had_correct": result.get("already_had_correct", False),
-                "correct_choice_ids": correct_choice_ids,
-                "expected_answer": question.expected_answer or "",
-                "attempts": QuestionAttemptSerializer(attempts, many=True).data,
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
-class UserQuestionProgressView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        payload = get_user_question_progress(request.user)
-        serializer = UserProgressSerializer(payload)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 # ----- Rooms -----
 

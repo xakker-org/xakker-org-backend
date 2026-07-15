@@ -20,9 +20,6 @@ from .views import (
     MissionPassDetailView,
     MissionStartView,
     MyMissionProgressView,
-    QuestionDetailView,
-    QuestionListView,
-    QuestionSubmitAnswerView,
     RoomDetailView,
     RoomEnrollView,
     RoomListView,
@@ -30,7 +27,6 @@ from .views import (
     TaskAnswerSubmitView,
     TaskDetailView,
     TaskHintView,
-    UserQuestionProgressView,
 )
 
 urlpatterns = [
@@ -53,12 +49,6 @@ urlpatterns = [
         TaskHintView.as_view(),
         name="task-hint",
     ),
-
-    # Self-study questions
-    path("questions/", QuestionListView.as_view(), name="question-list"),
-    path("questions/<int:id>/", QuestionDetailView.as_view(), name="question-detail"),
-    path("questions/<int:id>/submit-answer/", QuestionSubmitAnswerView.as_view(), name="question-submit-answer"),
-    path("user/questions-progress/", UserQuestionProgressView.as_view(), name="user-question-progress"),
 
     # Categories
     path("categories/", CategoryListView.as_view(), name="category-list"),

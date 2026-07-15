@@ -5,7 +5,6 @@ from courses.models import (
     Enrollment,
     MissionExamAttempt,
     MissionProgress,
-    QuestionAttempt,
     UserLessonProgress,
     UserQuestionAttempt,
     UserTaskProgress,
@@ -17,7 +16,6 @@ from adminapi.serializers.progress import (
     EnrollmentAdminSerializer,
     MissionExamAttemptAdminSerializer,
     MissionProgressAdminSerializer,
-    QuestionAttemptAdminSerializer,
     UserLessonProgressAdminSerializer,
     UserQuestionAttemptAdminSerializer,
     UserTaskProgressAdminSerializer,
@@ -43,14 +41,6 @@ class UserQuestionAttemptAdminViewSet(ReadOnlyAdminViewSet):
     serializer_class = UserQuestionAttemptAdminSerializer
     filterset_fields = ["user", "is_correct"]
     search_fields = ["user__username", "question__prompt"]
-    ordering_fields = ["attempted_at"]
-
-
-class QuestionAttemptAdminViewSet(ReadOnlyAdminViewSet):
-    queryset = QuestionAttempt.objects.select_related("user", "question").all()
-    serializer_class = QuestionAttemptAdminSerializer
-    filterset_fields = ["user", "question", "is_correct"]
-    search_fields = ["user__username", "question__title"]
     ordering_fields = ["attempted_at"]
 
 

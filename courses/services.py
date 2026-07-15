@@ -4,8 +4,6 @@ from django.db import transaction
 from accounts.models import Activity, UserProfile
 
 from .models import (
-    Question,
-    QuestionAttempt,
     Room,
     Task,
     TaskAnswerKind,
@@ -40,111 +38,6 @@ def _touch_streak(profile):
     if profile.streak_days > profile.best_streak:
         profile.best_streak = profile.streak_days
     profile.last_activity = now
-
-
-def _award_xp_for_question(user, points):
-    if points <= 0:
-        return
-    profile = _get_or_create_profile(user)
-    profile.xp = profile.xp + points
-    _touch_streak(profile)
-    profile.recompute_rank()
-    profile.save()
-
-
-def validate_question_answer(*, question: Question, answer_text="", selected_choice_id=None, selected_choice_ids=None):
-    selected_ids = []
-    if selected_choice_id is not None:
-        selected_ids.append(int(selected_choice_id))
-    if selected_choice_ids:
-        selected_ids.extend(int(item) for item in selected_choice_ids)
-
-    selected_ids = sorted(set(selected_ids))
-
-    if question.question_type == "closed":
-        correct_ids = sorted(
-            question.choices.filter(is_correct=True).values_list("id", flat=True)
-        )
-        is_correct = bool(correct_ids) and selected_ids == correct_ids
-        submitted_answer = ",".join(str(item) for item in selected_ids)
-        return is_correct, submitted_answer
-
-    normalized_answer = _normalize_text(answer_text)
-    raw_expected = (question.expected_answer or "").strip()
-    expected_values = [_normalize_text(item) for item in raw_expected.splitlines() if _normalize_text(item)]
-    if not expected_values and raw_expected:
-        expected_values = [_normalize_text(raw_expected)]
-    is_correct = bool(expected_values) and normalized_answer in expected_values
-    return is_correct, (answer_text or "").strip()
-
-
-def calculate_question_points(*, base_points, attempt_number, is_correct):
-    if not is_correct:
-        return 0
-    safe_attempt = max(1, int(attempt_number or 1))
-    raw_points = base_points / safe_attempt
-    return max(1, round(raw_points))
-
-
-@transaction.atomic
-def submit_question_answer(*, user, question: Question, answer_text="", selected_choice_id=None, selected_choice_ids=None, hint_used=False):
-    previous_attempts = QuestionAttempt.objects.filter(user=user, question=question)
-    previous_count = previous_attempts.count()
-    attempt_number = previous_count + 1
-
-    # Backend guard: points only on the FIRST ever correct answer
-    has_previous_correct = previous_attempts.filter(is_correct=True).exists()
-
-    is_correct, submitted_answer = validate_question_answer(
-        question=question,
-        answer_text=answer_text,
-        selected_choice_id=selected_choice_id,
-        selected_choice_ids=selected_choice_ids,
-    )
-
-    if is_correct and not has_previous_correct:
-        points_awarded = question.points
-        _award_xp_for_question(user, points_awarded)
-    else:
-        points_awarded = 0
-
-    attempt = QuestionAttempt.objects.create(
-        user=user,
-        question=question,
-        submitted_answer=submitted_answer,
-        is_correct=is_correct,
-        points_awarded=points_awarded,
-        attempt_number=attempt_number,
-        hint_used=hint_used,
-    )
-
-    return {
-        "attempt": attempt,
-        "is_correct": is_correct,
-        "points_awarded": points_awarded,
-        "attempt_number": attempt_number,
-        "explanation": question.explanation or "",
-        "already_had_correct": has_previous_correct,
-    }
-
-
-def get_user_question_progress(user):
-    attempts = QuestionAttempt.objects.filter(user=user)
-    total_questions = Question.objects.count()
-    answered_questions = attempts.values("question_id").distinct().count()
-    correct_answers = attempts.filter(is_correct=True).values("question_id").distinct().count()
-    total_attempts = attempts.count()
-    total_points_earned = sum(attempts.values_list("points_awarded", flat=True))
-    accuracy_percent = round((correct_answers / answered_questions) * 100, 2) if answered_questions else 0.0
-
-    return {
-        "total_questions": total_questions,
-        "answered_questions": answered_questions,
-        "correct_answers": correct_answers,
-        "total_attempts": total_attempts,
-        "total_points_earned": total_points_earned,
-        "accuracy_percent": accuracy_percent,
-    }
 
 
 def evaluate_answer(question: TaskQuestion, submitted_text: str, selected_choice_id=None):

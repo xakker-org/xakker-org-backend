@@ -9,12 +9,6 @@ class LevelChoices(models.TextChoices):
     ADVANCED = "advanced", "Advanced"
 
 
-class QuestionTypeChoices(models.TextChoices):
-    CLOSED = "closed", "Closed"
-    OPEN = "open", "Open"
-    TERMINAL = "terminal", "Terminal"
-
-
 class TaskAnswerKind(models.TextChoices):
     TEXT = "text", "Text match"
     FLAG = "flag", "Flag string"
@@ -319,55 +313,6 @@ class Enrollment(models.Model):
 
     def __str__(self):
         return f"{self.user.username} -> {self.course.title}"
-
-
-class Question(models.Model):
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="questions")
-    title = models.CharField(max_length=200)
-    prompt = models.TextField()
-    question_type = models.CharField(max_length=20, choices=QuestionTypeChoices.choices, default=QuestionTypeChoices.CLOSED)
-    level = models.CharField(max_length=20, choices=LevelChoices.choices, default=LevelChoices.BEGINNER)
-    points = models.PositiveIntegerField(default=10)
-    order = models.PositiveIntegerField(default=1)
-    expected_answer = models.TextField(blank=True, default="")
-    starter_code = models.TextField(blank=True)
-    explanation = models.TextField(blank=True)
-
-    class Meta:
-        ordering = ["order", "id"]
-
-    def __str__(self):
-        return f"{self.course.title} - {self.title}"
-
-
-class QuestionChoice(models.Model):
-    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="choices")
-    text = models.CharField(max_length=255)
-    is_correct = models.BooleanField(default=False)
-    order = models.PositiveIntegerField(default=1)
-
-    class Meta:
-        ordering = ["order", "id"]
-
-    def __str__(self):
-        return f"{self.question.title}: {self.text}"
-
-
-class QuestionAttempt(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="question_attempts")
-    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="attempts")
-    submitted_answer = models.TextField(blank=True, default="")
-    is_correct = models.BooleanField(default=False)
-    points_awarded = models.PositiveIntegerField(default=0)
-    attempt_number = models.PositiveIntegerField(default=1)
-    hint_used = models.BooleanField(default=False)
-    attempted_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["-attempted_at", "-id"]
-
-    def __str__(self):
-        return f"{self.user.username} · {self.question.title} · try {self.attempt_number}"
 
 
 # ═══════════════════════════════════════════════════════════════

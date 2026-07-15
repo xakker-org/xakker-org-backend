@@ -7,7 +7,7 @@ Run:
     python manage.py seed_all --demo-users
 
 ModeI qovlama:
-    Category, Course, Lesson, Question (self-study), QuestionChoice
+    Category, Course, Lesson
     RoomTag, Room, Task, TaskQuestion, TaskQuestionChoice
     Mission, MissionPass, MissionExam, MissionExamQuestion, MissionExamChoice
     LearningPlan, LearningPlanCourse
@@ -31,9 +31,6 @@ from courses.models import (
     MissionExamChoice,
     MissionExamQuestion,
     MissionPass,
-    Question,
-    QuestionChoice,
-    QuestionTypeChoices,
     Room,
     RoomTag,
     Task,

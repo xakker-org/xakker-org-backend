@@ -8,7 +8,6 @@ from .missions import (
     MissionPassAdminSerializer,
 )
 from .plans import LearningPlanAdminSerializer
-from .questions import QuestionAdminSerializer
 from .tasks import TaskAdminSerializer, TaskQuestionAdminSerializer
 from .users import AdminUserSerializer
 
@@ -24,7 +23,6 @@ __all__ = [
     "TaskQuestionAdminSerializer",
     "LessonAdminSerializer",
     "LessonQuestionAdminSerializer",
-    "QuestionAdminSerializer",
     "LearningPlanAdminSerializer",
     "MissionAdminSerializer",
     "MissionExamAdminSerializer",

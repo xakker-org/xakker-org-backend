@@ -4,7 +4,6 @@ from courses.models import (
     Enrollment,
     MissionExamAttempt,
     MissionProgress,
-    QuestionAttempt,
     UserLessonProgress,
     UserQuestionAttempt,
     UserTaskProgress,
@@ -27,15 +26,6 @@ class UserQuestionAttemptAdminSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserQuestionAttempt
-        fields = "__all__"
-
-
-class QuestionAttemptAdminSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source="user.username", read_only=True)
-    question_title = serializers.CharField(source="question.title", read_only=True)
-
-    class Meta:
-        model = QuestionAttempt
         fields = "__all__"
 
 

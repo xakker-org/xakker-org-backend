@@ -54,7 +54,7 @@ class AutoSlugMixin:
 
 
 class OptionLetteringSerializerMixin(serializers.Serializer):
-    """Shared by QuestionAdminSerializer and MissionExamQuestionAdminSerializer.
+    """Shared by TaskQuestionAdminSerializer, LessonQuestionAdminSerializer, and MissionExamQuestionAdminSerializer.
 
     Inherits from serializers.Serializer (not a plain mixin) so that
     SerializerMetaclass picks up the option_a../correct_option/choices
