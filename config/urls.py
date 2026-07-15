@@ -16,6 +16,7 @@ urlpatterns = [
     path("api/courses/", include("courses.urls")),
     path("api/admin/", include("adminapi.urls")),
     path("api/ai-chat/", include("chatbot.urls")),
+    path("api/missions/", include("ctf.urls")),
 ]
 
 if settings.DEBUG:

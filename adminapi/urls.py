@@ -12,6 +12,12 @@ from adminapi.views.content import (
     RoomAdminViewSet,
     RoomTagAdminViewSet,
 )
+from adminapi.views.ctf import (
+    CtfMissionAdminViewSet,
+    CtfMissionProgressAdminViewSet,
+    MissionCategoryAdminViewSet,
+    MissionTagAdminViewSet,
+)
 from adminapi.views.lessons import LessonAdminViewSet, LessonQuestionAdminViewSet
 from adminapi.views.missions import (
     MissionAdminViewSet,
@@ -54,6 +60,10 @@ router.register("progress/mission-exam-attempts", MissionExamAttemptAdminViewSet
 router.register("progress/enrollments", EnrollmentAdminViewSet, basename="admin-progress-enrollment")
 router.register("audit-logs", AdminAuditLogViewSet, basename="admin-auditlog")
 router.register("assistant-prompt-notes", AssistantPromptNoteAdminViewSet, basename="admin-assistant-note")
+router.register("ctf-missions", CtfMissionAdminViewSet, basename="admin-ctf-mission")
+router.register("ctf-mission-categories", MissionCategoryAdminViewSet, basename="admin-ctf-mission-category")
+router.register("ctf-mission-tags", MissionTagAdminViewSet, basename="admin-ctf-mission-tag")
+router.register("progress/ctf-missions", CtfMissionProgressAdminViewSet, basename="admin-progress-ctf-mission")
 
 urlpatterns = [
     path("auth/login/", AdminTokenObtainPairView.as_view()),

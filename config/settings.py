@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "courses",
     "adminapi",
     "chatbot",
+    "ctf",
 ]
 
 MIDDLEWARE = [
