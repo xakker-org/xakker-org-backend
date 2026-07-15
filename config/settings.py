@@ -170,6 +170,7 @@ CSRF_TRUSTED_ORIGINS = [
         "ADMIN_CORS_ORIGINS",
         "https://admin.xakker.org,http://admin.xakker.org:8080,http://localhost:5175,http://127.0.0.1:5175",
     ),
+    "https://*.vercel.app",
 ]
 
 REST_FRAMEWORK = {
