@@ -12,6 +12,7 @@
           "config/**",
           "accounts/**",
           "courses/**",
+          "chatbot/**",
           "static/**",
           "staticfiles/**",
           "manage.py"
